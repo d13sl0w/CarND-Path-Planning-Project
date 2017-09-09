@@ -236,6 +236,7 @@ int main() {
                         next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
                     }
 
+                    cout << j[1] << endl;
 
                     // Add newly defined pts to outgoing JSON message
                     msgJson["next_x"] = next_x_vals;
