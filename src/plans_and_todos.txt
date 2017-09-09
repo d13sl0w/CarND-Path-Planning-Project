@@ -1,0 +1,22 @@
+1.first pass idea, just go in straight line along highway, using Frenet coordinates
+    * find a car in front of you, slow, follow that car?
+    * what if no car in front of you?
+    * what if car changes lanes?
+    * how to reliably smooth path?
+
+
+
+
+
+
+Broad To-Dos:
+-Frenet coordinates speed calculator
+-FSM for decision making probably?
+-auto restart for running algorithm over again?
+-logging crashes? PROBABLY NOT
+-trajectory generation mechanism for sure
+-waypt interpolation for more comprehensible short term geometries
+-current lane analyzer (w/ or w/o waypt modifier)
+-spline together old and new portions
+
+-some sort of RL thing like from MITSDC
