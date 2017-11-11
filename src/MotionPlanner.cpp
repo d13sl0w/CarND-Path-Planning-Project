@@ -13,13 +13,18 @@
 #include <sstream>
 #include <string>
 #include <iterator>
+#include "spline.h"
+#include "Eigen-3.3/Eigen/Core"
+#include "Eigen-3.3/Eigen/QR"
 
 using namespace std;
 
 class FrenetDouble {
     // modular double for frenet s, maybe some mods for d/ <dx,dy> too
+    // mod subtraction gonna work?
 };
 
+//template or generated depending on lane width?
 enum LANE { LEFT_LANE = 1, CENTER_LANE = 2, RIGHT_LANE = 3};
 
 enum STATE { KEEPING_LANE = 0, CHANGING_LANE = 1};
@@ -88,6 +93,7 @@ private:
     int latency_in_steps; //1 to 3 expected
     int steps_over_which_to_define_jerk; //5 is suggested
 
+    double LANE_WIDTH; //width of lanes, in this case 4 meters each (6 lanes)
     OtherCar& find_leading_car() {
         return &OtherCar;
     };
@@ -96,7 +102,11 @@ private:
         return true;
     }
 
+    void generate_new_path() {
+        // update next xs and ys to return to simulator
+        //  possibly melding with returned ones
+    }
 };
-
-
-#endif //PATH_PLANNING_MOTIONPLANNER_H
+//
+//
+//#endif //PATH_PLANNING_MOTIONPLANNER_H
