@@ -38,8 +38,12 @@ struct OtherCar {
     int uid;
     double other_x;
     double other_y; // in map coordinates for all
+
     double other_vx; // in meters per second, of course
     double other_vy; // OTHER CARS CAN EXCEED SPEED LIMIT BY 10MPH, WILL ALSO LIKE STAY ABOVE 50-10MPH
+    double calculated_speed_from_above_vxvy;
+    double calculated_yaw_from_above_vxvy;
+
     double other_s;
     double other_d;
 };
