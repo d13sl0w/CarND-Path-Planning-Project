@@ -16,9 +16,21 @@
 
 using namespace std;
 
+class FrenetDouble {
+    // modular double for frenet s, maybe some mods for d/ <dx,dy> too
+};
+
 enum LANE { LEFT_LANE = 1, CENTER_LANE = 2, RIGHT_LANE = 3};
 
 enum STATE { KEEPING_LANE = 0, CHANGING_LANE = 1};
+
+struct Waypoint {
+    double x; // in map coordinates
+    double y;
+    double s; // distance along rode to get to point
+    double dx; // unit normal vector components of vector pointing out of loop
+    double dy;
+};
 
 // This should probably be an inheritance isssue, ProtoCar with OtherCar as a simple
 //  descendant and ControlledCar as the full on one... but of course data is given differently
@@ -67,8 +79,10 @@ public:
 
 
 private:
-    double TIME_STEP_BETWEEN_PTS = 0.2; // seconds
+    double TIME_STEP_BETWEEN_PTS = 0.02; // seconds
     double max_sep_for_pts;
+    int latency_in_steps; //1 to 3 expected
+    int steps_over_which_to_define_jerk; //5 is suggested
 
     OtherCar& find_leading_car() {
         return &OtherCar;
