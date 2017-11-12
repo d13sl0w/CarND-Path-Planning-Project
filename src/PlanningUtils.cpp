@@ -16,8 +16,6 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 
-using namespace std;
-
 //class FrenetDouble {
 //    // modular double for frenet s, maybe some mods for d/ <dx,dy> too
 //    // mod subtraction gonna work?
@@ -35,7 +33,7 @@ namespace PlanUtils {
         return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
     }
 
-    int ClosestWaypoint(double x, double y, vector<double> maps_x, vector<double> maps_y) {
+    int ClosestWaypoint(double x, double y, std::vector<double> maps_x, std::vector<double> maps_y) {
 
         double closestLen = 100000; //large number
         int closestWaypoint = 0;
@@ -55,7 +53,7 @@ namespace PlanUtils {
 
     }
 
-    int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y) {
+    int NextWaypoint(double x, double y, double theta, std::vector<double> maps_x, std::vector<double> maps_y) {
         int closestWaypoint = ClosestWaypoint(x, y, maps_x, maps_y);
         double map_x = maps_x[closestWaypoint];
         double map_y = maps_y[closestWaypoint];
@@ -69,7 +67,7 @@ namespace PlanUtils {
     }
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-    vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y) {
+    std::vector<double> getFrenet(double x, double y, double theta, std::vector<double> maps_x, std::vector<double> maps_y) {
         int next_wp = NextWaypoint(x, y, theta, maps_x, maps_y);
 
         int prev_wp;
@@ -113,7 +111,7 @@ namespace PlanUtils {
     }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
-    vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> maps_x, vector<double> maps_y) {
+    std::vector<double> getXY(double s, double d, std::vector<double> maps_s, std::vector<double> maps_x, std::vector<double> maps_y) {
         int prev_wp = -1;
 
         while (s > maps_s[prev_wp + 1] && (prev_wp < (int) (maps_s.size() - 1))) {

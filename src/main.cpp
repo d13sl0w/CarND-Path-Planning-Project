@@ -11,8 +11,6 @@
 #include "json.hpp"
 #include "MotionPlanner.cpp"
 
-using namespace std;
-
 // for convenience
 using json = nlohmann::json;
 
@@ -113,8 +111,8 @@ int main() {
 // **************************** BEGIN DOUG CODE ***************************************
 // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
                     auto path_struct = planner.generate_new_path();
-                    vector<double> next_x_vals = path_struct.x_vals;
-                    vector<double> next_y_vals = path_struct.y_vals;
+                    std::vector<double> next_x_vals = path_struct.x_vals;
+                    std::vector<double> next_y_vals = path_struct.y_vals;
 // ******************************* END DOUG CODE ***************************************
 
                     // Add newly defined pts to outgoing JSON message
