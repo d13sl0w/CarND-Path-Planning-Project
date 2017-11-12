@@ -22,7 +22,9 @@
 //};
 
 // For converting back and forth between radians and degrees.
-namespace PlanUtils {
+class PlanUtils {
+public:
+
     constexpr double pi() { return M_PI; }
 
     double deg2rad(double x) { return x * pi() / 180; }
@@ -67,7 +69,8 @@ namespace PlanUtils {
     }
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-    std::vector<double> getFrenet(double x, double y, double theta, std::vector<double> maps_x, std::vector<double> maps_y) {
+    std::vector<double>
+    getFrenet(double x, double y, double theta, std::vector<double> maps_x, std::vector<double> maps_y) {
         int next_wp = NextWaypoint(x, y, theta, maps_x, maps_y);
 
         int prev_wp;
@@ -111,7 +114,8 @@ namespace PlanUtils {
     }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
-    std::vector<double> getXY(double s, double d, std::vector<double> maps_s, std::vector<double> maps_x, std::vector<double> maps_y) {
+    std::vector<double>
+    getXY(double s, double d, std::vector<double> maps_s, std::vector<double> maps_x, std::vector<double> maps_y) {
         int prev_wp = -1;
 
         while (s > maps_s[prev_wp + 1] && (prev_wp < (int) (maps_s.size() - 1))) {
@@ -134,4 +138,4 @@ namespace PlanUtils {
 
         return {x, y};
     }
-}
+};

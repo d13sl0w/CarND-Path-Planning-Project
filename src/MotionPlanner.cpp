@@ -57,6 +57,7 @@ struct PathPair { vector<double> x_vals, y_vals; };
 
 class MotionPlanner {
 private:
+    PlanUtils planUtils;
     // in map coordinates for all
     // all internal variables in meters per second ** n
     double ego_x, ego_y, ego_yaw, ego_s, ego_d, ego_speed, prev_final_s, prev_final_d;
@@ -84,8 +85,8 @@ public:
         double dist_inc = 0.02;
         for(int i = 0; i < 50; i++) // 50 should actually be internal variable, same for above
         {
-            new_path.x_vals.push_back(ego_x+(dist_inc*i)*cos(PlanUtils::deg2rad(ego_yaw)));
-            new_path.y_vals.push_back(ego_y+(dist_inc*i)*sin(PlanUtils::deg2rad(ego_yaw)));
+            new_path.x_vals.push_back(ego_x+(dist_inc*i)*cos(planUtils.deg2rad(ego_yaw)));
+            new_path.y_vals.push_back(ego_y+(dist_inc*i)*sin(planUtils.deg2rad(ego_yaw)));
         }
         return new_path; //  possibly melding with returned old ones
     }
