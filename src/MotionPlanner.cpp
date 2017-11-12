@@ -1,10 +1,9 @@
 //
 // Created by dieslow on 11/11/17.
 //
-
-//#include "MotionPlanner.h"
-
 #include <random>
+#include "json.hpp"
+#include "PlanningUtils.cpp"
 #include <algorithm>
 #include <iostream>
 #include <numeric>
@@ -17,6 +16,9 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 
+// TODO: PACKAGE UTILS INTO A NAMESPACE
+using json = nlohmann::json;
+
 using namespace std;
 
 //class FrenetDouble {
@@ -25,10 +27,6 @@ using namespace std;
 //};
 
 // For converting back and forth between radians and degrees.
-
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
 
 //template or generated depending on lane width?
 enum LANE { LEFT_LANE = 1, CENTER_LANE = 2, RIGHT_LANE = 3};
@@ -63,7 +61,7 @@ private:
     // all internal variables in meters per second ** n
     double ego_x, ego_y, ego_yaw, ego_s, ego_d, ego_speed, prev_final_s, prev_final_d;
     std::vector<double>  prev_path_xs, prev_path_ys;
-    auto sensor_fusion;
+    std::vector<std::vector<double>> sensor_fusion;
 //    double front_buffer_tolerance, passing_buffer_tolerance;
 //    double target_median, target_speed;
     double speed_limit, max_accel, max_jerk, lane_width; //width of lanes, in this case 4 meters each (6 lanes)
@@ -72,7 +70,6 @@ private:
 //    LANE current_lane, target_lane;
 //    bool currently_obstructed, left_lane_free, right_lane_free, imminent_collision {false};
     double MPH_2_METPERSEC_FACTOR{0.44704}; //const? but breaks constructor????
-
 
 public:
     MotionPlanner(double set_speed_limit, double set_max_accel, double set_max_jerk, double set_lane_width) :
@@ -87,13 +84,13 @@ public:
         double dist_inc = 0.02;
         for(int i = 0; i < 50; i++) // 50 should actually be internal variable, same for above
         {
-            new_path.x_vals.push_back(ego_x+(dist_inc*i)*cos(deg2rad(ego_yaw)));
-            new_path.y_vals.push_back(ego_y+(dist_inc*i)*sin(deg2rad(ego_yaw)));
+            new_path.x_vals.push_back(ego_x+(dist_inc*i)*cos(PlanUtils::deg2rad(ego_yaw)));
+            new_path.y_vals.push_back(ego_y+(dist_inc*i)*sin(PlanUtils::deg2rad(ego_yaw)));
         }
         return new_path; //  possibly melding with returned old ones
     }
 
-    void telemetry_update(auto const telemetry_packet) {
+    void telemetry_update(json telemetry_packet) {
         // Main car's localization Data
         ego_x = telemetry_packet["x"];
         ego_y = telemetry_packet["y"];
@@ -102,17 +99,18 @@ public:
         ego_yaw = telemetry_packet["yaw"];
         ego_speed = telemetry_packet["speed"];
 
-        // Previous path data given to the Planner
-        prev_path_xs = telemetry_packet["previous_path_x"];
-        prev_path_ys = telemetry_packet["previous_path_y"];
+        // Previous path data given to the Planner TODO: NO IDEA IF THIS ASSIGN SHIT IS GONNA FLY
+        prev_path_xs.assign(telemetry_packet["previous_path_x"].begin(), telemetry_packet["previous_path_x"].end());
+        prev_path_ys.assign(telemetry_packet["previous_path_y"].begin(), telemetry_packet["previous_path_y"].end());
 
         // Previous path's end s and d values
         prev_final_s = telemetry_packet["end_path_s"];
         prev_final_d = telemetry_packet["end_path_d"];
 
         // Sensor Fusion Data, a list of all other cars on the same side of the road.
-        sensor_fusion = telemetry_packet["sensor_fusion"];
-        cout << "SENSOR****" << sensor_fusion[0] << endl;
+        sensor_fusion = telemetry_packet["sensor_fusion"].get<std::vector<std::vector<double>>>();
+//        sensor_fusion = std::copy(telemetry_packet["sensor_fusion"].begin(), telemetry_packet["sensor_fusion"].end());
+//        cout << "SENSOR****" << sensor_fusion[0] << endl;
     }
 //    const OtherCar& current_lane_car;
 //    OtherCar& find_leading_car() {return &OtherCar;};
@@ -209,4 +207,3 @@ public:
 
 
 //*************** END TO-DO/MY CODE!!!!!**************************************
-//#endif //PATH_PLANNING_MOTIONPLANNER_H
