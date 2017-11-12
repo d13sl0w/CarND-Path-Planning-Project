@@ -92,7 +92,7 @@ public:
 
     PathPair generate_new_path() {
         PathPair new_path;
-        double dist_inc = 0.06;
+        double dist_inc = 0.04;
         double next_s = ego_s;
         double next_d = ego_d;
         for(int i = 0; i < 50; i++) // 50 should actually be internal variable, same for above
