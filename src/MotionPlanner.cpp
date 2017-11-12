@@ -91,11 +91,15 @@ public:
     }
 
     PathPair generate_new_path() {
+        // TODO: This is obviously in a state of disrepair, but it's following the shitty xy coordinates
+        //  returned from the helper function...
+
+        // TODO: I'd really like to improve the frenet coordinates myself, interesting mathematically (diff geometry, I think)
         PathPair new_path;
         double dist_inc = 0.04;
         double next_s = ego_s;
         double next_d = ego_d;
-        for(int i = 0; i < 50; i++) // 50 should actually be internal variable, same for above
+        for(int i = 0; i < 30; i++) // 50 should actually be internal variable, same for above
         {
             next_s += (i + 1) * dist_inc;
             auto next_xy = planUtils.getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
