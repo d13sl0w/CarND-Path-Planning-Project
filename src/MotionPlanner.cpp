@@ -65,6 +65,7 @@ private:
     std::vector<std::vector<double>> sensor_fusion;
 //    double front_buffer_tolerance, passing_buffer_tolerance;
 //    double target_median, target_speed;
+    vector<double> map_waypoints_x, map_waypoints_y, map_waypoints_dx, map_waypoints_s, map_waypoints_dy;
     double speed_limit, max_accel, max_jerk, lane_width; //width of lanes, in this case 4 meters each (6 lanes)
 //    double time_step_between_pts, max_sep_for_pts; // 0.02 seconds
 //    int latency_in_steps, steps_over_which_to_define_jerk; //1 to 3 expected; 5 is suggested
@@ -72,9 +73,18 @@ private:
 //    bool currently_obstructed, left_lane_free, right_lane_free, imminent_collision {false};
     double MPH_2_METPERSEC_FACTOR{0.44704}; //const? but breaks constructor????
 
+//    void check_front_buffer() {}
+//    void check_change_lanes_buffer() {}
+//    void assign_lead_car() {}
+
 public:
-    MotionPlanner(double set_speed_limit, double set_max_accel, double set_max_jerk, double set_lane_width) :
-            speed_limit(set_speed_limit), max_accel(set_max_accel), max_jerk(set_max_jerk), lane_width(set_lane_width) {}
+    MotionPlanner(double set_speed_limit, double set_max_accel, double set_max_jerk, double set_lane_width,
+                  vector<double> map_waypoints_x, vector<double> map_waypoints_y, vector<double> map_waypoints_s,
+                  vector<double> map_waypoints_dx, vector<double> map_waypoints_dy) :
+                        speed_limit(set_speed_limit), max_accel(set_max_accel), max_jerk(set_max_jerk),
+                        lane_width(set_lane_width), map_waypoints_x(map_waypoints_x), map_waypoints_y(map_waypoints_y),
+                        map_waypoints_s(map_waypoints_s), map_waypoints_dx(map_waypoints_dx),
+                        map_waypoints_dy(map_waypoints_dy) {} //TODO: make this one data structure
 
     void set_speed_limit(const double set_speed_mph) {
         ego_speed = set_speed_mph * MPH_2_METPERSEC_FACTOR;
@@ -83,8 +93,12 @@ public:
     PathPair generate_new_path() {
         PathPair new_path;
         double dist_inc = 0.02;
+        double next_s = ego_s;
+        double next_d = ego_d;
         for(int i = 0; i < 50; i++) // 50 should actually be internal variable, same for above
         {
+            next_s += ego_s + ((i + 1) * dist_inc);
+            planUtils.getXY()
             new_path.x_vals.push_back(ego_x+(dist_inc*i)*cos(planUtils.deg2rad(ego_yaw)));
             new_path.y_vals.push_back(ego_y+(dist_inc*i)*sin(planUtils.deg2rad(ego_yaw)));
         }

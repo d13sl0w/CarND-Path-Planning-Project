@@ -40,7 +40,6 @@ int main() {
     double set_max_accel {10};
     double set_max_jerk {50};
     double set_lane_width {4};
-    MotionPlanner planner {set_speed_limit, set_max_accel, set_max_jerk, set_lane_width};
     // ****************************** END DOUG CODE ***************************************
 
 
@@ -82,6 +81,11 @@ int main() {
 
     int lane = 1;
     double target_speed = 50;
+
+    // **************************** BEGIN DOUG CODE ***************************************
+    MotionPlanner planner {set_speed_limit, set_max_accel, set_max_jerk, set_lane_width, map_waypoints_x,
+                           map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy};
+    // ******************************* END DOUG CODE ***************************************
 
     h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &target_speed, &planner](
             uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
