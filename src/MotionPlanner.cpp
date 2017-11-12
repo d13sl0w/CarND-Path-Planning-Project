@@ -92,15 +92,15 @@ public:
 
     PathPair generate_new_path() {
         PathPair new_path;
-        double dist_inc = 0.02;
+        double dist_inc = 0.06;
         double next_s = ego_s;
         double next_d = ego_d;
         for(int i = 0; i < 50; i++) // 50 should actually be internal variable, same for above
         {
-            next_s += ego_s + ((i + 1) * dist_inc);
-            planUtils.getXY()
-            new_path.x_vals.push_back(ego_x+(dist_inc*i)*cos(planUtils.deg2rad(ego_yaw)));
-            new_path.y_vals.push_back(ego_y+(dist_inc*i)*sin(planUtils.deg2rad(ego_yaw)));
+            next_s += (i + 1) * dist_inc;
+            auto next_xy = planUtils.getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            new_path.x_vals.push_back(next_xy[0]);
+            new_path.y_vals.push_back(next_xy[1]);
         }
         return new_path; //  possibly melding with returned old ones
     }
