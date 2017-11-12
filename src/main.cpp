@@ -5,6 +5,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include "spline.h"
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
@@ -16,9 +17,7 @@ using json = nlohmann::json;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
-
 double deg2rad(double x) { return x * pi() / 180; }
-
 double rad2deg(double x) { return x * 180 / pi(); }
 
 // Checks if the SocketIO event has JSON data.
@@ -184,7 +183,10 @@ int main() {
         map_waypoints_dy.push_back(d_y);
     }
 
-    h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](
+    int lane = 1;
+    double target_speed = 50;
+
+    h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &target_speed](
             uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
             uWS::OpCode opCode) {
         // "42" at the start of the message means there's a websocket message event.
@@ -203,24 +205,8 @@ int main() {
 
                 if (event == "telemetry") {
                     // j[1] is the data JSON object
-
-                    // Main car's localization Data
-                    double car_x = j[1]["x"];
-                    double car_y = j[1]["y"];
-                    double car_s = j[1]["s"];
-                    double car_d = j[1]["d"];
-                    double car_yaw = j[1]["yaw"];
-                    double car_speed = j[1]["speed"];
-
-                    // Previous path data given to the Planner
-                    auto previous_path_x = j[1]["previous_path_x"];
-                    auto previous_path_y = j[1]["previous_path_y"];
-                    // Previous path's end s and d values
-                    double end_path_s = j[1]["end_path_s"];
-                    double end_path_d = j[1]["end_path_d"];
-
-                    // Sensor Fusion Data, a list of all other cars on the same side of the road.
-                    auto sensor_fusion = j[1]["sensor_fusion"];
+                    auto telemetry_packet = j[1];
+                    // Send updates for Main car's localization Data and sensor fusion
 
                     json msgJson;
 
@@ -229,46 +215,99 @@ int main() {
 
 
                     // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-                    // TEST DUMMY CODE
-                    double pos_x;
-                    double pos_y;
-                    double angle;
-                    int path_size = previous_path_x.size();
+                    // ***************** TEST/MY DUMMY CODE *****************************************
+//                    double pos_x, pos_y, pos_s, pos_d;
+//                    double angle;
+//                    int previous_path_size = previous_path_x.size();
 
-                    for(int i = 0; i < path_size; i++)
+//                    if (previous_path_size == 0) {
+//                        pos_s = car_s;
+//                        pos_d = car_d;
+//                    }
+//                    else {
+//                        cout << "cars: " << car_s << ", card: " << car_d << endl;
+//
+////                        pos_x = previous_path_x[1];
+////                        pos_y = previous_path_y[1];
+////                        double pos1_x2 = previous_path_x[0];
+////                        double pos1_y2 = previous_path_y[0];
+////                        angle = atan2(pos_y - pos1_y2, pos_x - pos1_x2);
+////                        auto frenet1 = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
+////                        cout << "curposs: " << frenet1[0] << ", curposd: " << frenet1[1] << endl;
+//
+////                        pos_x = previous_path_x[previous_path_size - 1];
+////                        pos_y = previous_path_y[previous_path_size - 1];
+////
+////                        double pos_x2 = previous_path_x[previous_path_size - 2];
+////                        double pos_y2 = previous_path_y[previous_path_size - 2];
+////                        angle = atan2(pos_y - pos_y2, pos_x - pos_x2);
+////
+////                        auto frenet = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
+////                        pos_s = frenet[0];
+////                        pos_d = frenet[1];
+////                        cout << "poss: " << pos_s << ", posd: " << pos_d << endl;
+//
+//                        pos_s = end_path_s;
+//                        pos_d = end_path_d;
+//                        // fill up this iterations path with remaining points first
+//                        for (int i = 0; i < previous_path_size; i++) {
+//                            next_x_vals.push_back(previous_path_x[i]);
+//                            next_y_vals.push_back(previous_path_y[i]);
+//                        }
+//                    }
+
+//                    double dist_inc = 30;
+//                    double dist_inc_pt = 0.02;
+//                    double next_s, next_d, next_x, next_y;
+////                    pos_s = car_s;
+////                    pos_d = car_d;
+//                    vector<double> x_spline_feeder, y_spline_feeder;
+//                    for (int i = 0; i < 3 ; i++) {
+//                        next_s = pos_s + dist_inc;
+//                        next_d = pos_d;
+//
+//                        auto xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+//                        next_x = xy[0];
+//                        next_y = xy[1];
+//
+//                        x_spline_feeder.push_back(next_x);
+//                        y_spline_feeder.push_back(next_y);
+//
+//                        pos_s = next_s;
+//                        pos_d = 6; //next_d;
+//                    }
+//
+//                    tk::spline spline;
+//                    spline.set_points(x_spline_feeder, y_spline_feeder);
+//
+//                    vector<double> xs, ys;
+//                    int count = int(floor((dist_inc * 3) * dist_inc_pt));
+//                    double xstep = (x_spline_feeder[2] - x_spline_feeder[0]) / count;
+//                    double start_x;
+//                    for (int i = 0; i <= count; i++) {
+//                        start_x += i * xstep;
+//                        xs.push_back(start_x);
+//                    }
+//
+//                    double start_y;
+//                    for (int i = 0; i <= count; i++) {
+//                        start_y = spline(xs[0]);
+//                        ys.push_back(start_y);
+//                    }
+//                    // END TEST DUMMY CODE
+//
+//                    next_x_vals = xs;
+//                    next_y_vals = ys;
+
+//                    cout << j[1] << endl;
+                    double dist_inc = 0.02;
+                    for(int i = 0; i < 50; i++)
                     {
-                        next_x_vals.push_back(previous_path_x[i]);
-                        next_y_vals.push_back(previous_path_y[i]);
+                        next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
+                        next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
                     }
 
-                    if(path_size == 0)
-                    {
-                        pos_x = car_x;
-                        pos_y = car_y;
-                        angle = deg2rad(car_yaw);
-                    }
-                    else
-                    {
-                        pos_x = previous_path_x[path_size-1];
-                        pos_y = previous_path_y[path_size-1];
-
-                        double pos_x2 = previous_path_x[path_size-2];
-                        double pos_y2 = previous_path_y[path_size-2];
-                        angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-                    }
-
-                    double dist_inc = 0.1;
-                    for(int i = 0; i < 50-path_size; i++)
-                    {
-                        next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
-                        next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
-                        pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
-                        pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
-                    }
-                    // END TEST DUMMY CODE
-
-
-                    cout << j[1] << endl;
+                    //*************** END TO-DO/MY CODE!!!!!**************************************
 
                     // Add newly defined pts to outgoing JSON message
                     msgJson["next_x"] = next_x_vals;

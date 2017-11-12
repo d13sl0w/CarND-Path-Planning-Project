@@ -1,13 +1,17 @@
-1.first pass idea, just go in straight line along highway, using Frenet coordinates
+1.first pass idea, just go in straight line along highway, using Frenet coordinates (shown in walkthrough!!!)
+    * GIVEN FRENET TRANSITION FUCKS UP ON CORNERS
     * find a car in front of you, slow, follow that car?
     * what if no car in front of you?
     * what if car changes lanes?
     * how to reliably smooth path?
 
-
-
-
-
+Video suggestions:
+1. fit pts 30m apart (just a few), spline together, then sample full set inside for actual trajectory
+2. last pt of previous path set to origin and 0 degree heading... work in local car coords
+3. increment reference speed each interval by some value less than the max accleration, pass that
+    reference velocity to the spline generator
+4. wrap around of frenet coordinates using total length
+5. Car behind you will not necessarily ram you if you stop, but it may if too fast
 
 Broad To-Dos:
 -Frenet coordinates speed calculator
