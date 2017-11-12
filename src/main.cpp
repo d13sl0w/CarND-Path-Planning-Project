@@ -9,16 +9,12 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
+#include "MotionPlanner.cpp"
 
 using namespace std;
 
 // for convenience
 using json = nlohmann::json;
-
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -147,6 +143,15 @@ vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> m
 //};
 
 int main() {
+    // **************************** BEGIN DOUG CODE ***************************************
+    double set_speed_limit {50};
+    double set_max_accel {10};
+    double set_max_jerk {50};
+    double set_lane_width {4};
+    MotionPlanner planner {set_speed_limit, set_max_accel, set_max_jerk, set_lane_width};
+    // ****************************** END DOUG CODE ***************************************
+
+
     uWS::Hub h;
 
     // Load up map values for waypoint's x,y,s and d normalized normal vectors
@@ -206,108 +211,17 @@ int main() {
                 if (event == "telemetry") {
                     // j[1] is the data JSON object
                     auto telemetry_packet = j[1];
+                    planner.telemetry_update(telemetry_packet);
                     // Send updates for Main car's localization Data and sensor fusion
 
                     json msgJson;
 
-                    vector<double> next_x_vals;
-                    vector<double> next_y_vals;
-
-
-                    // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-                    // ***************** TEST/MY DUMMY CODE *****************************************
-//                    double pos_x, pos_y, pos_s, pos_d;
-//                    double angle;
-//                    int previous_path_size = previous_path_x.size();
-
-//                    if (previous_path_size == 0) {
-//                        pos_s = car_s;
-//                        pos_d = car_d;
-//                    }
-//                    else {
-//                        cout << "cars: " << car_s << ", card: " << car_d << endl;
-//
-////                        pos_x = previous_path_x[1];
-////                        pos_y = previous_path_y[1];
-////                        double pos1_x2 = previous_path_x[0];
-////                        double pos1_y2 = previous_path_y[0];
-////                        angle = atan2(pos_y - pos1_y2, pos_x - pos1_x2);
-////                        auto frenet1 = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
-////                        cout << "curposs: " << frenet1[0] << ", curposd: " << frenet1[1] << endl;
-//
-////                        pos_x = previous_path_x[previous_path_size - 1];
-////                        pos_y = previous_path_y[previous_path_size - 1];
-////
-////                        double pos_x2 = previous_path_x[previous_path_size - 2];
-////                        double pos_y2 = previous_path_y[previous_path_size - 2];
-////                        angle = atan2(pos_y - pos_y2, pos_x - pos_x2);
-////
-////                        auto frenet = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
-////                        pos_s = frenet[0];
-////                        pos_d = frenet[1];
-////                        cout << "poss: " << pos_s << ", posd: " << pos_d << endl;
-//
-//                        pos_s = end_path_s;
-//                        pos_d = end_path_d;
-//                        // fill up this iterations path with remaining points first
-//                        for (int i = 0; i < previous_path_size; i++) {
-//                            next_x_vals.push_back(previous_path_x[i]);
-//                            next_y_vals.push_back(previous_path_y[i]);
-//                        }
-//                    }
-
-//                    double dist_inc = 30;
-//                    double dist_inc_pt = 0.02;
-//                    double next_s, next_d, next_x, next_y;
-////                    pos_s = car_s;
-////                    pos_d = car_d;
-//                    vector<double> x_spline_feeder, y_spline_feeder;
-//                    for (int i = 0; i < 3 ; i++) {
-//                        next_s = pos_s + dist_inc;
-//                        next_d = pos_d;
-//
-//                        auto xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-//                        next_x = xy[0];
-//                        next_y = xy[1];
-//
-//                        x_spline_feeder.push_back(next_x);
-//                        y_spline_feeder.push_back(next_y);
-//
-//                        pos_s = next_s;
-//                        pos_d = 6; //next_d;
-//                    }
-//
-//                    tk::spline spline;
-//                    spline.set_points(x_spline_feeder, y_spline_feeder);
-//
-//                    vector<double> xs, ys;
-//                    int count = int(floor((dist_inc * 3) * dist_inc_pt));
-//                    double xstep = (x_spline_feeder[2] - x_spline_feeder[0]) / count;
-//                    double start_x;
-//                    for (int i = 0; i <= count; i++) {
-//                        start_x += i * xstep;
-//                        xs.push_back(start_x);
-//                    }
-//
-//                    double start_y;
-//                    for (int i = 0; i <= count; i++) {
-//                        start_y = spline(xs[0]);
-//                        ys.push_back(start_y);
-//                    }
-//                    // END TEST DUMMY CODE
-//
-//                    next_x_vals = xs;
-//                    next_y_vals = ys;
-
-//                    cout << j[1] << endl;
-                    double dist_inc = 0.02;
-                    for(int i = 0; i < 50; i++)
-                    {
-                        next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
-                        next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
-                    }
-
-                    //*************** END TO-DO/MY CODE!!!!!**************************************
+// **************************** BEGIN DOUG CODE ***************************************
+// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+                    auto path_struct = planner.generate_new_path();
+                    vector<double> next_x_vals = path_struct.x_vals;
+                    vector<double> next_y_vals = path_struct.y_vals;
+// ******************************* END DOUG CODE ***************************************
 
                     // Add newly defined pts to outgoing JSON message
                     msgJson["next_x"] = next_x_vals;
