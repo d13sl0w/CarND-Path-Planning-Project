@@ -188,20 +188,12 @@ public:
         }
 
         // in Frenet coords add 30m spaced points ahead of starting reference
-        vector<double> next_wp0 = planUtils.getXY(ego_s+30,(2+4*current_lane), map_waypoints_s,
-                                                    map_waypoints_x, map_waypoints_y);
-        vector<double> next_wp1 = planUtils.getXY(ego_s+60,(2+4*current_lane), map_waypoints_s,
-                                                    map_waypoints_x, map_waypoints_y);
-        vector<double> next_wp2 = planUtils.getXY(ego_s+90,(2+4*current_lane), map_waypoints_s,
-                                                    map_waypoints_x, map_waypoints_y);
-
-        ptsx.push_back(next_wp0[0]);
-        ptsx.push_back(next_wp1[0]);
-        ptsx.push_back(next_wp2[0]);
-
-        ptsy.push_back(next_wp0[1]);
-        ptsy.push_back(next_wp1[1]);
-        ptsy.push_back(next_wp2[1]);
+        for (int i = 1; i <= 2; i++) {
+            vector<double> next_wp = planUtils.getXY(ego_s + (30*i), (2 + 4 * current_lane), map_waypoints_s,
+                                                      map_waypoints_x, map_waypoints_y);
+            ptsx.push_back(next_wp[0]);
+            ptsy.push_back(next_wp[1]);
+        }
 
         // shift car ref angle to 0 to make math easie
         for (int i = 0; i < ptsx.size(); i++) {
