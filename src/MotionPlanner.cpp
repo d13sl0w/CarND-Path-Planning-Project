@@ -29,8 +29,12 @@ using namespace std;
 // For converting back and forth between radians and degrees.
 
 //template or generated depending on lane width?
-enum LANE { LEFT_LANE = 1, CENTER_LANE = 2, RIGHT_LANE = 3};
-enum STATE { KEEPING_LANE = 0, CHANGING_LANE = 1};
+enum LANE {
+    LEFT_LANE = 1, CENTER_LANE = 2, RIGHT_LANE = 3
+};
+enum STATE {
+    KEEPING_LANE = 0, CHANGING_LANE = 1
+};
 struct Waypoint {
     double x; // in map coordinates
     double y;
@@ -53,7 +57,9 @@ struct OtherCar {
     double other_s;
     double other_d;
 };
-struct PathPair { vector<double> x_vals, y_vals; };
+struct PathPair {
+    vector<double> x_vals, y_vals;
+};
 
 class MotionPlanner {
 private:
@@ -61,7 +67,7 @@ private:
     // in map coordinates for all
     // all internal variables in meters per second ** n
     double ego_x, ego_y, ego_yaw, ego_s, ego_d, ego_speed, prev_final_s, prev_final_d;
-    std::vector<double>  prev_path_xs, prev_path_ys; // TODO: THIS RETURNS ONLY POINTS NOT TRAVELLED TO IN LATER SIMULATION ITERATION
+    std::vector<double> prev_path_xs, prev_path_ys; // TODO: THIS RETURNS ONLY POINTS NOT TRAVELLED TO IN LATER SIMULATION ITERATION
     std::vector<std::vector<double>> sensor_fusion;
 //    double front_buffer_tolerance, passing_buffer_tolerance;
 //    double target_median, target_speed;
@@ -81,10 +87,10 @@ public:
     MotionPlanner(double set_speed_limit, double set_max_accel, double set_max_jerk, double set_lane_width,
                   vector<double> map_waypoints_x, vector<double> map_waypoints_y, vector<double> map_waypoints_s,
                   vector<double> map_waypoints_dx, vector<double> map_waypoints_dy) :
-                        speed_limit(set_speed_limit), max_accel(set_max_accel), max_jerk(set_max_jerk),
-                        lane_width(set_lane_width), map_waypoints_x(map_waypoints_x), map_waypoints_y(map_waypoints_y),
-                        map_waypoints_s(map_waypoints_s), map_waypoints_dx(map_waypoints_dx),
-                        map_waypoints_dy(map_waypoints_dy) {} //TODO: make this one data structure
+            speed_limit(set_speed_limit), max_accel(set_max_accel), max_jerk(set_max_jerk),
+            lane_width(set_lane_width), map_waypoints_x(map_waypoints_x), map_waypoints_y(map_waypoints_y),
+            map_waypoints_s(map_waypoints_s), map_waypoints_dx(map_waypoints_dx),
+            map_waypoints_dy(map_waypoints_dy) {} //TODO: make this one data structure
 
     void set_speed_limit(const double set_speed_mph) {
         ego_speed = set_speed_mph * MPH_2_METPERSEC_FACTOR;
@@ -99,7 +105,7 @@ public:
         double dist_inc = 0.04;
         double next_s = ego_s;
         double next_d = ego_d;
-        for(int i = 0; i < 30; i++) // 50 should actually be internal variable, same for above
+        for (int i = 0; i < 30; i++) // 50 should actually be internal variable, same for above
         {
             next_s += (i + 1) * dist_inc;
             auto next_xy = planUtils.getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
@@ -119,8 +125,8 @@ public:
         ego_speed = telemetry_packet["speed"];
 
         // Previous path data given to the Planner TODO: NO IDEA IF THIS ASSIGN SHIT IS GONNA FLY
-//        prev_path_xs.assign(telemetry_packet["previous_path_x"].begin(), telemetry_packet["previous_path_x"].end());
-//        prev_path_ys.assign(telemetry_packet["previous_path_y"].begin(), telemetry_packet["previous_path_y"].end());
+        prev_path_xs.assign(telemetry_packet["previous_path_x"].begin(), telemetry_packet["previous_path_x"].end());
+        prev_path_ys.assign(telemetry_packet["previous_path_y"].begin(), telemetry_packet["previous_path_y"].end());
 
         // Previous path's end s and d values
         prev_final_s = telemetry_packet["end_path_s"];
@@ -137,15 +143,14 @@ public:
 
 
 
-    PathPair spline_next(auto prev_path_xs, auto prev_path_ys) { //splines guaranteed through points, typically made of piece wise from polynomials
+    PathPair spline_next() { //splines guaranteed through points, typically made of piece wise from polynomials
         // ***************** TEST/MY DUMMY CODE *****************************************
         int current_lane = 1;
         int prev_path_size = prev_path_xs.size(); //sim tells you this TODO: THIS RETURNS ONLY POINTS NOT TRAVELLED TO IN LATER SIMULATION ITERATION
 
         // create list of sparce x,y wpts, evenly spaced at 30m
         //  will later interpolate with spline and fill
-        vector<double> ptsx;
-        vector<double> ptsy;
+        vector<double> ptsx, ptsy;
 
         // reference x,y yaw states; will either reference the starting point as where the car is
         //  or at the previous path's end point
@@ -172,12 +177,12 @@ public:
 
         } else { // use the prev path's end point as the starting reference
             cout << "option 2" << endl;
-            ref_x = prev_path_xs[prev_path_size-1];
-            ref_y = prev_path_ys[prev_path_size-1];
+            ref_x = prev_path_xs[prev_path_size - 1];
+            ref_y = prev_path_ys[prev_path_size - 1];
 
-            double ref_x_prev = prev_path_xs[prev_path_size-2];
-            double ref_y_prev = prev_path_ys[prev_path_size-2];
-            ref_yaw = atan2(ref_y-ref_y_prev, ref_x-ref_x_prev);
+            double ref_x_prev = prev_path_xs[prev_path_size - 2];
+            double ref_y_prev = prev_path_ys[prev_path_size - 2];
+            ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
 
             // use two pts that make the path tanget to the previous path's end point
             ptsx.push_back(ref_x_prev);
@@ -187,12 +192,12 @@ public:
             ptsy.push_back(ref_y);
         }
 
-        // in Frenet coords add 30m spaced points ahead of starting reference
+        // in Frenet coords add i(here, 3) 30m spaced points ahead of starting reference
         for (int i = 1; i <= 2; i++) {
-            vector<double> next_wp = planUtils.getXY(ego_s + (30*i), (2 + 4 * current_lane), map_waypoints_s,
-                                                      map_waypoints_x, map_waypoints_y);
-            ptsx.push_back(next_wp[0]);
-            ptsy.push_back(next_wp[1]);
+            vector<double> bkbone_waypts = planUtils.getXY(ego_s + (30 * i), (2 + 4 * current_lane), map_waypoints_s,
+                                                           map_waypoints_x, map_waypoints_y);
+            ptsx.push_back(bkbone_waypts[0]);
+            ptsy.push_back(bkbone_waypts[1]);
         }
 
         // shift car ref angle to 0 to make math easie
@@ -200,27 +205,25 @@ public:
             double shift_x = ptsx[i] - ref_x;
             double shift_y = ptsy[i] - ref_y;
 
-            ptsx[i] = (shift_x * cos(0-ref_yaw) - shift_y*sin(0-ref_yaw));
-            ptsy[i] = (shift_x * sin(0-ref_yaw) + shift_y*cos(0-ref_yaw));
+            ptsx[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
+            ptsy[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
         }
 
-        // create a spline
         tk::spline spline;
         // set x,y pts to spline
         cout << ptsx.size() << "," << ptsy.size() << endl;
         cout << "ptsx: ";
-        for (int i = 0; i < ptsx.size(); i++ ) {
+        for (int i = 0; i < ptsx.size(); i++) {
             cout << ptsx[i] << ", ";
         }
         cout << endl;
         spline.set_points(ptsx, ptsy);
 
         // define actual x,y pts we will use for this planner
-        vector<double> next_x_vals;
-        vector<double> next_y_vals;
+        vector<double> next_x_vals, next_y_vals;
 
         // start with all previous points from last time
-        for (int i=0; i < prev_path_xs.size(); i++) {
+        for (int i = 0; i < prev_path_xs.size(); i++) {
             next_x_vals.push_back(prev_path_xs[i]);
             next_y_vals.push_back(prev_path_ys[i]);
         }
@@ -228,15 +231,15 @@ public:
         // calculate how to break up spline points so that we travel at our desired ref velocity
         double target_x = 30.0;
         double target_y = spline(target_x);
-        double target_dist = sqrt(((target_x)*(target_x))+((target_y)*(target_y)));
+        double target_dist = sqrt(((target_x) * (target_x)) + ((target_y) * (target_y)));
 
-        double x_add_on = 0;
 
         // fill up the rest of our path planner after filling it with previous pts, here we will always
         //  output 50 pts
-        for(int i = 1; i <= (50-prev_path_xs.size()); i++) {
-            double N = (target_dist/(0.02*ref_vel/2.24));
-            double x_point = x_add_on+(target_x)/N;
+        double x_add_on = 0;
+        for (int i = 1; i <= (50 - prev_path_xs.size()); i++) {
+            double N = (target_dist / (0.02 * ref_vel / 2.24));
+            double x_point = x_add_on + (target_x) / N;
             double y_point = spline(x_point);
 
             x_add_on = x_point;
@@ -245,12 +248,11 @@ public:
             double y_ref = y_point;
 
             // rotate back to normal after rotating it earlier
-            x_point = (x_ref * cos(ref_yaw)-y_ref*sin(ref_yaw));
-            y_point = (x_ref * sin(ref_yaw)+y_ref*cos(ref_yaw));
+            x_point = (x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw));
+            y_point = (x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw));
 
             x_point += ref_x;
             y_point += ref_y;
-
 
             next_x_vals.push_back(x_point);
             next_y_vals.push_back(y_point);

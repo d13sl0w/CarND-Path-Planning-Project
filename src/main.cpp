@@ -115,7 +115,7 @@ int main() {
 // **************************** BEGIN DOUG CODE ***************************************
 // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 //                    auto path_struct = planner.generate_new_path();
-                    auto path_struct = planner.spline_next(telemetry_packet["previous_path_x"], telemetry_packet["previous_path_y"]);
+                    auto path_struct = planner.spline_next();
                     std::vector<double> next_x_vals = path_struct.x_vals;
                     std::vector<double> next_y_vals = path_struct.y_vals;
 // ******************************* END DOUG CODE ***************************************
