@@ -61,7 +61,7 @@ private:
     // in map coordinates for all
     // all internal variables in meters per second ** n
     double ego_x, ego_y, ego_yaw, ego_s, ego_d, ego_speed, prev_final_s, prev_final_d;
-    std::vector<double>  prev_path_xs, prev_path_ys;
+    std::vector<double>  prev_path_xs, prev_path_ys; // TODO: THIS RETURNS ONLY POINTS NOT TRAVELLED TO IN LATER SIMULATION ITERATION
     std::vector<std::vector<double>> sensor_fusion;
 //    double front_buffer_tolerance, passing_buffer_tolerance;
 //    double target_median, target_speed;
@@ -119,8 +119,8 @@ public:
         ego_speed = telemetry_packet["speed"];
 
         // Previous path data given to the Planner TODO: NO IDEA IF THIS ASSIGN SHIT IS GONNA FLY
-        prev_path_xs.assign(telemetry_packet["previous_path_x"].begin(), telemetry_packet["previous_path_x"].end());
-        prev_path_ys.assign(telemetry_packet["previous_path_y"].begin(), telemetry_packet["previous_path_y"].end());
+//        prev_path_xs.assign(telemetry_packet["previous_path_x"].begin(), telemetry_packet["previous_path_x"].end());
+//        prev_path_ys.assign(telemetry_packet["previous_path_y"].begin(), telemetry_packet["previous_path_y"].end());
 
         // Previous path's end s and d values
         prev_final_s = telemetry_packet["end_path_s"];
@@ -137,12 +137,10 @@ public:
 
 
 
-    void spline_next() { //splines guaranteed through points, typically made of piece wise from polynomials
+    PathPair spline_next(auto prev_path_xs, auto prev_path_ys) { //splines guaranteed through points, typically made of piece wise from polynomials
         // ***************** TEST/MY DUMMY CODE *****************************************
-        double pos_x, pos_y, pos_s, pos_d;
-        double angle;
-
-        int prev_path_size = prev_path_xs.size(); //sim tells you this
+        int current_lane = 1;
+        int prev_path_size = prev_path_xs.size(); //sim tells you this TODO: THIS RETURNS ONLY POINTS NOT TRAVELLED TO IN LATER SIMULATION ITERATION
 
         // create list of sparce x,y wpts, evenly spaced at 30m
         //  will later interpolate with spline and fill
@@ -153,6 +151,8 @@ public:
         //  or at the previous path's end point
         double ref_x = ego_x;
         double ref_y = ego_y;
+        cout << "ref x: " << ref_x << ", ref y: " << ego_y << endl;
+        double ref_vel = 50;
         double ref_yaw = planUtils.deg2rad(ego_yaw);
 
         // find angle car was heading via tangency of points, push two points to ptss
@@ -160,6 +160,7 @@ public:
         // if previous size is almost empty use the car as starting reference???: does sim return full path or no
         if (prev_path_size < 2) {
             // use two points that make the path tangent to the car
+            cout << "option 1" << endl;
             double prev_car_x = ego_x - cos(ego_yaw);
             double prev_car_y = ego_y - sin(ego_yaw);
 
@@ -168,12 +169,15 @@ public:
 
             ptsy.push_back(prev_car_y);
             ptsy.push_back(ego_y);
+
         } else { // use the prev path's end point as the starting reference
+            cout << "option 2" << endl;
             ref_x = prev_path_xs[prev_path_size-1];
             ref_y = prev_path_ys[prev_path_size-1];
 
             double ref_x_prev = prev_path_xs[prev_path_size-2];
             double ref_y_prev = prev_path_ys[prev_path_size-2];
+            ref_yaw = atan2(ref_y-ref_y_prev, ref_x-ref_x_prev);
 
             // use two pts that make the path tanget to the previous path's end point
             ptsx.push_back(ref_x_prev);
@@ -211,6 +215,12 @@ public:
         // create a spline
         tk::spline spline;
         // set x,y pts to spline
+        cout << ptsx.size() << "," << ptsy.size() << endl;
+        cout << "ptsx: ";
+        for (int i = 0; i < ptsx.size(); i++ ) {
+            cout << ptsx[i] << ", ";
+        }
+        cout << endl;
         spline.set_points(ptsx, ptsy);
 
         // define actual x,y pts we will use for this planner
@@ -218,18 +228,44 @@ public:
         vector<double> next_y_vals;
 
         // start with all previous points from last time
-        for (int i=0; i<prev_path_xs.size(); i++) {
+        for (int i=0; i < prev_path_xs.size(); i++) {
             next_x_vals.push_back(prev_path_xs[i]);
             next_y_vals.push_back(prev_path_ys[i]);
         }
 
         // calculate how to break up spline points so that we travel at our desired ref velocity
         double target_x = 30.0;
+        double target_y = spline(target_x);
+        double target_dist = sqrt(((target_x)*(target_x))+((target_y)*(target_y)));
+
+        double x_add_on = 0;
+
+        // fill up the rest of our path planner after filling it with previous pts, here we will always
+        //  output 50 pts
+        for(int i = 1; i <= (50-prev_path_xs.size()); i++) {
+            double N = (target_dist/(0.02*ref_vel/2.24));
+            double x_point = x_add_on+(target_x)/N;
+            double y_point = spline(x_point);
+
+            x_add_on = x_point;
+
+            double x_ref = x_point;
+            double y_ref = y_point;
+
+            // rotate back to normal after rotating it earlier
+            x_point = (x_ref * cos(ref_yaw)-y_ref*sin(ref_yaw));
+            y_point = (x_ref * sin(ref_yaw)+y_ref*cos(ref_yaw));
+
+            x_point += ref_x;
+            y_point += ref_y;
 
 
-
+            next_x_vals.push_back(x_point);
+            next_y_vals.push_back(y_point);
+        }
+        PathPair results = {next_x_vals, next_y_vals};
+        return results;
 //*************** END TO-DO/MY CODE!!!!!**************************************
-
     }
 };
 //
