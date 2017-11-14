@@ -8,8 +8,8 @@
 #include <iostream>
 #include <numeric>
 #include <math.h>
-#include <iostream>
 #include <sstream>
+#include <vector>
 #include <string>
 #include <iterator>
 #include "spline.h"
@@ -69,7 +69,7 @@ private:
     double speed_limit, max_accel, max_jerk, lane_width; //width of lanes, in this case 4 meters each (6 lanes)
 //    double time_step_between_pts, max_sep_for_pts; // 0.02 seconds
 //    int latency_in_steps, steps_over_which_to_define_jerk; //1 to 3 expected; 5 is suggested
-//    LANE current_lane, target_lane;
+    LANE current_lane, target_lane;
 //    bool currently_obstructed, left_lane_free, right_lane_free, imminent_collision {false};
     double MPH_2_METPERSEC_FACTOR{0.44704}; //const? but breaks constructor????
 
@@ -134,9 +134,138 @@ public:
 //    const OtherCar& current_lane_car;
 //    OtherCar& find_leading_car() {return &OtherCar;};
 //    bool determine_if_obstructed() {return true;}
+
+
+
+    void spline_next() { //splines guaranteed through points, typically made of piece wise from polynomials
+        // ***************** TEST/MY DUMMY CODE *****************************************
+        double pos_x, pos_y, pos_s, pos_d;
+        double angle;
+
+        int prev_path_size = prev_path_xs.size(); //sim tells you this
+
+        // create list of sparce x,y wpts, evenly spaced at 30m
+        //  will later interpolate with spline and fill
+        vector<double> ptsx;
+        vector<double> ptsy;
+
+        // reference x,y yaw states; will either reference the starting point as where the car is
+        //  or at the previous path's end point
+        double ref_x = ego_x;
+        double ref_y = ego_y;
+        double ref_yaw = planUtils.deg2rad(ego_yaw);
+
+        // find angle car was heading via tangency of points, push two points to ptss
+
+        // if previous size is almost empty use the car as starting reference???: does sim return full path or no
+        if (prev_path_size < 2) {
+            // use two points that make the path tangent to the car
+            double prev_car_x = ego_x - cos(ego_yaw);
+            double prev_car_y = ego_y - sin(ego_yaw);
+
+            ptsx.push_back(prev_car_x);
+            ptsx.push_back(ego_x);
+
+            ptsy.push_back(prev_car_y);
+            ptsy.push_back(ego_y);
+        } else { // use the prev path's end point as the starting reference
+            ref_x = prev_path_xs[prev_path_size-1];
+            ref_y = prev_path_ys[prev_path_size-1];
+
+            double ref_x_prev = prev_path_xs[prev_path_size-2];
+            double ref_y_prev = prev_path_ys[prev_path_size-2];
+
+            // use two pts that make the path tanget to the previous path's end point
+            ptsx.push_back(ref_x_prev);
+            ptsx.push_back(ref_x);
+
+            ptsy.push_back(ref_y_prev);
+            ptsy.push_back(ref_y);
+        }
+
+        // in Frenet coords add 30m spaced points ahead of starting reference
+        vector<double> next_wp0 = planUtils.getXY(ego_s+30,(2+4*current_lane), map_waypoints_s,
+                                                    map_waypoints_x, map_waypoints_y);
+        vector<double> next_wp1 = planUtils.getXY(ego_s+60,(2+4*current_lane), map_waypoints_s,
+                                                    map_waypoints_x, map_waypoints_y);
+        vector<double> next_wp2 = planUtils.getXY(ego_s+90,(2+4*current_lane), map_waypoints_s,
+                                                    map_waypoints_x, map_waypoints_y);
+
+        ptsx.push_back(next_wp0[0]);
+        ptsx.push_back(next_wp1[0]);
+        ptsx.push_back(next_wp2[0]);
+
+        ptsy.push_back(next_wp0[1]);
+        ptsy.push_back(next_wp1[1]);
+        ptsy.push_back(next_wp2[1]);
+
+        // shift car ref angle to 0 to make math easie
+        for (int i = 0; i < ptsx.size(); i++) {
+            double shift_x = ptsx[i] - ref_x;
+            double shift_y = ptsy[i] - ref_y;
+
+            ptsx[i] = (shift_x * cos(0-ref_yaw) - shift_y*sin(0-ref_yaw));
+            ptsy[i] = (shift_x * sin(0-ref_yaw) + shift_y*cos(0-ref_yaw));
+        }
+
+        // create a spline
+        tk::spline spline;
+        // set x,y pts to spline
+        spline.set_points(ptsx, ptsy);
+
+        // define actual x,y pts we will use for this planner
+        vector<double> next_x_vals;
+        vector<double> next_y_vals;
+
+        // start with all previous points from last time
+        for (int i=0; i<prev_path_xs.size(); i++) {
+            next_x_vals.push_back(prev_path_xs[i]);
+            next_y_vals.push_back(prev_path_ys[i]);
+        }
+
+        // calculate how to break up spline points so that we travel at our desired ref velocity
+        double target_x = 30.0;
+
+
+
+//*************** END TO-DO/MY CODE!!!!!**************************************
+
+    }
 };
 //
 //
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ***************** TEST/MY DUMMY CODE *****************************************
 //                    double pos_x, pos_y, pos_s, pos_d;

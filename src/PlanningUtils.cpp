@@ -8,6 +8,7 @@
 #include <iostream>
 #include <numeric>
 #include <math.h>
+#include <vector>
 #include <iostream>
 #include <sstream>
 #include <string>
