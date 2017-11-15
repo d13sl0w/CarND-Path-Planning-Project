@@ -44,19 +44,35 @@ struct Waypoint {
 };
 // This should probably be an inheritance isssue, ProtoCar with OtherCar as a simple
 //  descendant and ControlledCar as the full on one... but of course data is given differently
-struct OtherCar {
+
+
+class OtherCar {
+public:
     int uid;
-    double other_x;
-    double other_y; // in map coordinates for all
+    double x, y; // in map coordinates for all
+    double vx, vy; // in meters per second, of course OTHER CARS CAN EXCEED SPEED LIMIT BY 10MPH, WILL ALSO LIKE STAY ABOVE 50-10MPH
+    double s, d;
+    double speed, yaw; // relative to ego yaw?
+    LANE current_lane;
+//         STATE state;
 
-    double other_vx; // in meters per second, of course
-    double other_vy; // OTHER CARS CAN EXCEED SPEED LIMIT BY 10MPH, WILL ALSO LIKE STAY ABOVE 50-10MPH
-    double calculated_speed_from_above_vxvy;
-    double calculated_yaw_from_above_vxvy;
+    OtherCar(int _uid, double _x, double _y, double _vx, double _vy, double _s, double _d) {
+        uid = _uid;
+        x   = _x;
+        y   = _y;
+        vx  = _vx;
+        vy  = _vy;
+        s   = _s;
+        d   = _d;
 
-    double other_s;
-    double other_d;
+        speed = sqrt(vx*vx + vy*vy); // both from_above_vxvy
+        yaw   = atan2(vy, vx); // presumeably radians and map coordinates
+
+        current_lane = static_cast<LANE>((int)round(d / 2.)); // hacky, I know
+    }
 };
+
+
 struct PathPair {
     vector<double> x_vals, y_vals;
 };
