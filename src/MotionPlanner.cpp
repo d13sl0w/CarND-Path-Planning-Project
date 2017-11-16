@@ -101,16 +101,10 @@ private:
     OtherCar leading_car;
 
     double front_buffer_distance = 35; //meters
-    double target_speed = 20;
+    double target_speed {20}, ctrl_speed {0};
     bool LEFT_LANE_CLEAR {false}, RIGHT_LANE_CLEAR {false}, LEFT_LANE_ADVANTAGE {false}, RIGHT_LANE_ADVANTAGE {false};
     bool TOO_SLOW {false}, CAR_IN_ZONE {false}, ACCIDENT_INCIPIENT {false}, LEADING_CAR {false}, DESIRE_TURN {false};
-    bool RIGHT_LEAD_CAR {false}, LEFT_LEAD_CAR {false};
-
-
-
-//    void check_front_buffer() {}
-//    void check_change_lanes_buffer() {}
-//    void assign_lead_car() {}
+    bool RIGHT_LEAD_CAR {false}, LEFT_LEAD_CAR {false}, IS_CHANGING_LANES {false}, SPEED_LIMITED {false};
 
 public:
     MotionPlanner(double set_speed_limit, double set_max_accel, double set_max_jerk, double set_lane_width,
@@ -137,7 +131,6 @@ public:
     }
 
     void find_leading_car() { //TODO: has issue if there is none in front
-        LEADING_CAR = false;
         auto min_car_dist = std::numeric_limits<double>::max();
         for (const OtherCar& other: other_cars) {
             if (other.current_lane == current_lane && 0 < other.distance_from_ego_s  && other.distance_from_ego_s < min_car_dist) {
@@ -159,6 +152,7 @@ public:
 
     // TODO: WHY ISN'T CAR OBEYING LEAD CAR IN RIGHT LANE
     double find_nearest_car_speed(LANE lane) { //TODO: has issue if there is none in front
+        std::cout << "I'M RUNNING AT ALL EVEEEEERRR!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
         OtherCar nearest_in_lane;
         bool CAR_EXISTS {false};
         double lane_change_front_buffer = 25;
@@ -178,9 +172,13 @@ public:
         return result;
     }
 
+    void are_speed_limited() {
+        if ( speed_limit - leading_car.speed > 2.0) { SPEED_LIMITED = true; };
+    }
+
     void check_lanes_available() {
-        double turn_front_buffer = 10;
-        double turn_rear_buffer = 15;
+        double turn_front_buffer = 15;
+        double turn_rear_buffer = 25;
 
         LEFT_LANE_CLEAR = true;
         if (static_cast<int>(current_lane) - 1 < 0) {
@@ -189,18 +187,7 @@ public:
             for (const auto& other : other_cars) {
                 if (other.current_lane == current_lane - 1) {
                     if (other.s < ego_s + turn_front_buffer && other.s > ego_s - turn_rear_buffer) {
-                        LEFT_LANE_CLEAR = false;
-                    }
-                }
-            }
-        }
-        if (LEFT_LANE_CLEAR) {
-            LEFT_LANE_ADVANTAGE = false;
-            double left_lead_speed = find_nearest_car_speed(static_cast<LANE>(current_lane - 1));
-            if (left_lead_speed >= leading_car.speed + 0.3) {
-                LEFT_LANE_ADVANTAGE = true;
-            };
-        }
+                        LEFT_LANE_CLEAR = false; }}}}
 
         RIGHT_LANE_CLEAR = true;
         if (static_cast<int>(current_lane) + 1 > 2) {
@@ -209,44 +196,53 @@ public:
             for (const auto& other : other_cars) {
                 if (other.current_lane == current_lane+1) {
                     if (other.s < ego_s + turn_front_buffer && other.s > ego_s - turn_rear_buffer) {
-                        RIGHT_LANE_CLEAR = false;
-                    }
-                }
-            }
-        }
-        if (RIGHT_LANE_CLEAR) {
-            RIGHT_LANE_ADVANTAGE = false;
-            double right_lead_speed = find_nearest_car_speed(static_cast<LANE>(current_lane + 1));
-            if (right_lead_speed >= leading_car.speed + 0.3) {
-                RIGHT_LANE_ADVANTAGE = true;
-            };
-        }
+                        RIGHT_LANE_CLEAR = false; }}}}
+    }
+
+    void is_lane_advantage() {
+        double left_lead_speed = find_nearest_car_speed(static_cast<LANE>(current_lane - 1));
+        if (left_lead_speed >= leading_car.speed + 0.3) { LEFT_LANE_ADVANTAGE = true; }
+
+        double right_lead_speed = find_nearest_car_speed(static_cast<LANE>(current_lane + 1));
+        if (right_lead_speed >= leading_car.speed + 0.3) { RIGHT_LANE_ADVANTAGE = true; }
     }
 
 // TODO: I THINK OTHER CARS SPEED IS OFF!!!!
 // TODO: THIS REALLY REALLY NEEDS TO BE MADE INTO A TRUE FSM
     void state_update() {
-        find_leading_car();
-        if (LEADING_CAR) {
-            CAR_IN_ZONE = false;
-            is_leading_car_in_zone();
-        };
+        // TODO: prevent switches till completion probs if {IS_CHANGING_LANES}
+        LEADING_CAR = false;
+        CAR_IN_ZONE = false;
+        SPEED_LIMITED = false;
+        LEFT_LANE_CLEAR = false;
+        RIGHT_LANE_CLEAR = false;
+        LEFT_LANE_ADVANTAGE = false;
+        RIGHT_LANE_ADVANTAGE = false;
 
+
+        find_leading_car();
+        if (LEADING_CAR) { is_leading_car_in_zone(); }
         if (CAR_IN_ZONE) {
-            if (abs(leading_car.speed - target_speed) >= 3) {
-                check_lanes_available();
-                if (LEFT_LANE_CLEAR && LEFT_LANE_ADVANTAGE) {
-                    std::cout << "CHANGE TO LEFT LANE" << std::endl;
-                    current_lane = static_cast<LANE>((int) current_lane - 1);
-                } else {
-                    if (RIGHT_LANE_CLEAR && RIGHT_LANE_ADVANTAGE) {
-                        std::cout << "CHANGE TO RIGHT LANE" << std::endl;
-                        current_lane = static_cast<LANE>((int) current_lane + 1);
-                    } else { target_speed = leading_car.speed - 0.2; }
-                }
-            } else { target_speed = leading_car.speed - 0.2; }
-        } else { target_speed = speed_limit; }
-        std::cout << "CAR_IN_ZONE: " << CAR_IN_ZONE
+            target_speed = leading_car.speed - 0.2;
+            are_speed_limited();
+        }
+        else { target_speed = speed_limit; }
+        if (SPEED_LIMITED) { check_lanes_available(); }
+        if (LEFT_LANE_CLEAR) { is_lane_advantage(); }
+        if (LEFT_LANE_ADVANTAGE) {
+            std::cout << "CHANGE TO LEFT LANE" << std::endl;
+            current_lane = static_cast<LANE>((int) current_lane - 1);
+        } else {
+            if (RIGHT_LANE_CLEAR && RIGHT_LANE_ADVANTAGE) {
+                std::cout << "CHANGE TO RIGHT LANE" << std::endl;
+                current_lane = static_cast<LANE>((int) current_lane + 1);
+            }
+        }
+
+
+        std::cout << " LEADING_CAR: " << LEADING_CAR
+                  << " CAR_IN_ZONE: " << CAR_IN_ZONE
+                  << " SPEED_LIMITED: " << SPEED_LIMITED
                   << " RIGHT_LANE_CLEAR: " << RIGHT_LANE_CLEAR
                   << " RIGHT_LANE_ADVANTAGE: " << RIGHT_LANE_ADVANTAGE
                   << " LEFT_LANE_CLEAR: " << LEFT_LANE_CLEAR
@@ -299,7 +295,9 @@ public:
         double ref_x = ego_x;
         double ref_y = ego_y;
 //        cout << "ref x: " << ref_x << ", ref y: " << ego_y << endl;
-        double ref_vel = target_speed;
+        if (ctrl_speed > target_speed) { ctrl_speed -= 0.223;}
+        if (ctrl_speed < target_speed) { ctrl_speed += 0.223;}
+        double ref_vel = ctrl_speed;
         double ref_yaw = planUtils.deg2rad(ego_yaw);
 
         // find angle car was heading via tangency of points, push two points to ptss
