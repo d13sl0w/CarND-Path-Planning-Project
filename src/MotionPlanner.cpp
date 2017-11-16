@@ -154,6 +154,19 @@ public:
         }
     }
 
+    // TODO: WHY ISN'T CAR OBEYING LEAD CAR IN RIGHT LANE
+    double find_nearest_car_speed(LANE lane) { //TODO: has issue if there is none in front
+        OtherCar nearest_in_lane;
+        auto min_car_dist = std::numeric_limits<double>::max();
+        for (const OtherCar& other: other_cars) {
+            if (other.current_lane == lane && 0 < other.distance_from_ego_s  && other.distance_from_ego_s < min_car_dist) {
+                nearest_in_lane = other; //copy or what?
+                min_car_dist = other.distance_from_ego_s;
+            }
+        }
+        return nearest_in_lane.speed;
+    }
+
     void check_lanes_available() {
         double turn_front_buffer = 15;
         double turn_rear_buffer = 60;
@@ -170,6 +183,13 @@ public:
                 }
             }
         }
+        if (LEFT_LANE_CLEAR) {
+            LEFT_LANE_ADVANTAGE = false;
+            double left_lead_speed = find_nearest_car_speed(current_lane - 1);
+            if (left_lead_speed >= leading_car.speed + 3) {
+                LEFT_LANE_ADVANTAGE = true;
+            };
+        }
 
         RIGHT_LANE_CLEAR = true;
         if (static_cast<int>(current_lane) + 1 > 2) {
@@ -183,19 +203,15 @@ public:
                 }
             }
         }
-    }
-    // TODO: WHY ISN'T CAR OBEYING LEAD CAR IN RIGHT LANE
-    double find_nearest_car_vel(LANE lane) { //TODO: has issue if there is none in front
-        OtherCar nearest_in_lane;
-        auto min_car_dist = std::numeric_limits<double>::max();
-        for (const OtherCar& other: other_cars) {
-            if (other.current_lane == lane && 0 < other.distance_from_ego_s  && other.distance_from_ego_s < min_car_dist) {
-                nearest_in_lane = other; //copy or what?
-                min_car_dist = other.distance_from_ego_s;
-            }
+        if (RIGHT_LANE_CLEAR) {
+            RIGHT_LANE_ADVANTAGE = false;
+            double right_lead_speed = find_nearest_car_speed(current_lane + 1);
+            if (right_lead_speed >= leading_car.speed + 3) {
+                RIGHT_LANE_ADVANTAGE = true;
+            };
         }
-        return nearest_in_lane.speed;
     }
+
 
     void state_update() {
         if (CAR_IN_ZONE) {
@@ -211,12 +227,8 @@ public:
                         current_lane = static_cast<LANE>((int) current_lane + 1);
                     }
                 }
-            } else {
-                target_speed = leading_car.speed - 0.2;
-            }
-        } else {
-            target_speed = speed_limit;
-        }
+            } else { target_speed = leading_car.speed - 0.2; }
+        } else { target_speed = speed_limit; }
     }
 
     void telemetry_update(json telemetry_packet) {
