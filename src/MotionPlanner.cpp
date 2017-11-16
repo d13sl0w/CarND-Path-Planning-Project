@@ -164,14 +164,7 @@ public:
                 leading_car = other; //copy or what?
                 min_car_dist = other.distance_from_ego_s;
                 LEADING_CAR = true;
-                std:cout << "my lane: " << current_lane << ", my s: " << ego_s << ", my d: " << ego_d << std::endl;
-                std::cout << "other car: " << leading_car.uid << " , d: " << leading_car.d << ", s: " << leading_car.s <<  ", lane: " << leading_car.current_lane << std::endl;
             }
-        }
-        if (LEADING_CAR) {
-            std::cout << "leading car: " << leading_car.uid << std::endl;
-        } else {
-            std::cout << "no leading car" <<  std::endl;
         }
     }
 
@@ -183,7 +176,6 @@ public:
 
     void state_update() {
         if (CAR_IN_ZONE) {
-            std::cout << "CAR IN ZONE!!!" << endl;
             target_speed = leading_car.speed - 0.2;
         } else {
             target_speed = speed_limit;
@@ -209,7 +201,6 @@ public:
 
         // Sensor Fusion Data, a list of all other cars on the same side of the road.
         sensor_fusion = telemetry_packet["sensor_fusion"].get<std::vector<std::vector<double>>>();
-//        cout << "SENSOR****" << sensor_fusion[0] << endl;
 
         build_car_list(sensor_fusion);
         find_nearest_car();
@@ -218,6 +209,8 @@ public:
             is_leading_car_in_zone();
         };
         state_update();
+        current_lane = LEFT_LANE;
+
         std::cout << "target speed: " << target_speed << std::endl;
     }
 
@@ -292,12 +285,7 @@ public:
 
         tk::spline spline;
         // set x,y pts to spline
-//        cout << ptsx.size() << "," << ptsy.size() << endl;
-//        cout << "ptsx: ";
-//        for (int i = 0; i < ptsx.size(); i++) {
-//            cout << ptsx[i] << ", ";
-//        }
-//        cout << endl;
+
         spline.set_points(ptsx, ptsy);
 
         // define actual x,y pts we will use for this planner
