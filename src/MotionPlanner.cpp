@@ -136,11 +136,10 @@ public:
         std::cout << (int)other_cars.size();
     }
 
-    void find_nearest_car() { //TODO: has issue if there is none in front
+    void find_leading_car() { //TODO: has issue if there is none in front
         LEADING_CAR = false;
         auto min_car_dist = std::numeric_limits<double>::max();
         for (const OtherCar& other: other_cars) {
-
             if (other.current_lane == current_lane && 0 < other.distance_from_ego_s  && other.distance_from_ego_s < min_car_dist) {
                 leading_car = other; //copy or what?
                 min_car_dist = other.distance_from_ego_s;
@@ -185,9 +184,17 @@ public:
             }
         }
     }
-
-    void find_nearest_in_any_lane() {
-
+    // TODO: WHY ISN'T CAR OBEYING LEAD CAR IN RIGHT LANE
+    double find_nearest_car_vel(LANE lane) { //TODO: has issue if there is none in front
+        OtherCar nearest_in_lane;
+        auto min_car_dist = std::numeric_limits<double>::max();
+        for (const OtherCar& other: other_cars) {
+            if (other.current_lane == lane && 0 < other.distance_from_ego_s  && other.distance_from_ego_s < min_car_dist) {
+                nearest_in_lane = other; //copy or what?
+                min_car_dist = other.distance_from_ego_s;
+            }
+        }
+        return nearest_in_lane.speed;
     }
 
     void state_update() {
@@ -233,7 +240,7 @@ public:
         sensor_fusion = telemetry_packet["sensor_fusion"].get<std::vector<std::vector<double>>>();
 
         build_car_list(sensor_fusion);
-        find_nearest_car();
+        find_leading_car();
         if (LEADING_CAR) {
             CAR_IN_ZONE = false;
             is_leading_car_in_zone();
