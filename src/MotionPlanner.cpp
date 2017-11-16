@@ -186,17 +186,24 @@ public:
         }
     }
 
+    void find_nearest_in_any_lane() {
+
+    }
+
     void state_update() {
         if (CAR_IN_ZONE) {
             target_speed = leading_car.speed - 0.2;
-            check_lanes_available();
-            if (LEFT_LANE_CLEAR) {
-                std::cout << "CHANGE TO LEFT LANE" << std::endl;
-                current_lane = static_cast<LANE>((int)current_lane-1);
-            } else {
-                if (RIGHT_LANE_CLEAR) {
-                    std::cout << "CHANGE TO RIGHT LANE" << std::endl;
-                    current_lane = static_cast<LANE>((int)current_lane+1);
+//            DESIRE_TURN = false;
+            if (abs(leading_car.speed - target_speed) >= 5) {
+                check_lanes_available();
+                if (LEFT_LANE_CLEAR) {
+                    std::cout << "CHANGE TO LEFT LANE" << std::endl;
+                    current_lane = static_cast<LANE>((int) current_lane - 1);
+                } else {
+                    if (RIGHT_LANE_CLEAR) {
+                        std::cout << "CHANGE TO RIGHT LANE" << std::endl;
+                        current_lane = static_cast<LANE>((int) current_lane + 1);
+                    }
                 }
             }
         } else {
