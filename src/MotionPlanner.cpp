@@ -103,7 +103,7 @@ private:
     double front_buffer_distance = 50; //meters
     double target_speed = 20;
     bool LEFT_LANE_CLEAR {false}, RIGHT_LANE_CLEAR {false}, LEFT_LANE_ADVANTAGE {false}, RIGHT_LANE_ADVANTAGE {false};
-    bool TOO_SLOW {false}, CAR_IN_ZONE {false}, ACCIDENT_INCIPIENT {false}, LEADING_CAR {false};
+    bool TOO_SLOW {false}, CAR_IN_ZONE {false}, ACCIDENT_INCIPIENT {false}, LEADING_CAR {false}, DESIRE_TURN {false};
 
 
 
