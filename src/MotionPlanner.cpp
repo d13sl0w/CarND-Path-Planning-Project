@@ -30,7 +30,7 @@ using namespace std;
 
 //template or generated depending on lane width?
 enum LANE {
-    LEFT_LANE = 1, CENTER_LANE = 2, RIGHT_LANE = 3
+    LEFT_LANE = 0, CENTER_LANE = 1, RIGHT_LANE = 2
 };
 enum STATE {
     KEEPING_LANE = 0, CHANGING_LANE = 1
@@ -71,7 +71,7 @@ public:
         speed = sqrt(vx*vx + vy*vy); // both from_above_vxvy
         yaw   = atan2(vy, vx); // presumeably radians and map coordinates
 
-        current_lane = static_cast<LANE>((int)round(((d - 2.) / 4.) + 1 )); // hacky, I know
+        current_lane = static_cast<LANE>((int)round((d - 2.) / 4. )); // hacky, I know
     }
 
     OtherCar() = default;
@@ -124,25 +124,6 @@ public:
 //        ego_speed = set_speed_mph * MPH_2_METPERSEC_FACTOR;
 //    }
 
-    PathPair generate_new_path() {
-        // TODO: This is obviously in a state of disrepair, but it's following the shitty xy coordinates
-        //  returned from the helper function...
-
-        // TODO: I'd really like to improve the frenet coordinates myself, interesting mathematically (diff geometry, I think)
-        PathPair new_path;
-        double dist_inc = 0.04;
-        double next_s = ego_s;
-        double next_d = ego_d;
-        for (int i = 0; i < 30; i++) // 50 should actually be internal variable, same for above
-        {
-            next_s += (i + 1) * dist_inc;
-            auto next_xy = planUtils.getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            new_path.x_vals.push_back(next_xy[0]);
-            new_path.y_vals.push_back(next_xy[1]);
-        }
-        return new_path; //  possibly melding with returned old ones
-    }
-
 
     void build_car_list(std::vector<std::vector<double>> sensor_fusion_data) {
         other_cars.clear();
@@ -169,14 +150,55 @@ public:
     }
 
     void is_leading_car_in_zone() {
-        if (0 < leading_car.distance_from_ego_s && leading_car.distance_from_ego_s< front_buffer_distance) {
+        if (0 < leading_car.distance_from_ego_s && leading_car.distance_from_ego_s < front_buffer_distance) {
             CAR_IN_ZONE = true;
+        }
+    }
+
+    void check_lanes_available() {
+        double turn_front_buffer = 15;
+        double turn_rear_buffer = 60;
+
+        LEFT_LANE_CLEAR = true;
+        if (static_cast<int>(current_lane) - 1 < 0) {
+            LEFT_LANE_CLEAR = false;
+        } else {
+            for (const auto& other : other_cars) {
+                if (other.current_lane == current_lane - 1) {
+                    if (other.s < ego_s + turn_front_buffer && other.s > ego_s - turn_rear_buffer) {
+                        LEFT_LANE_CLEAR = false;
+                    }
+                }
+            }
+        }
+
+        RIGHT_LANE_CLEAR = true;
+        if (static_cast<int>(current_lane) + 1 > 2) {
+            RIGHT_LANE_CLEAR = false;
+        } else {
+            for (const auto& other : other_cars) {
+                if (other.current_lane == current_lane+1) {
+                    if (other.s < ego_s + turn_front_buffer && other.s > ego_s - turn_rear_buffer) {
+                        RIGHT_LANE_CLEAR = false;
+                    }
+                }
+            }
         }
     }
 
     void state_update() {
         if (CAR_IN_ZONE) {
             target_speed = leading_car.speed - 0.2;
+            check_lanes_available();
+            if (LEFT_LANE_CLEAR) {
+                std::cout << "CHANGE TO LEFT LANE" << std::endl;
+                current_lane = static_cast<LANE>((int)current_lane-1);
+            } else {
+                if (RIGHT_LANE_CLEAR) {
+                    std::cout << "CHANGE TO RIGHT LANE" << std::endl;
+                    current_lane = static_cast<LANE>((int)current_lane+1);
+                }
+            }
         } else {
             target_speed = speed_limit;
         }
@@ -209,7 +231,6 @@ public:
             is_leading_car_in_zone();
         };
         state_update();
-        current_lane = LEFT_LANE;
 
         std::cout << "target speed: " << target_speed << std::endl;
     }
@@ -219,7 +240,6 @@ public:
 
     PathPair spline_next() { //splines guaranteed through points, typically made of piece wise from polynomials
         // ***************** TEST/MY DUMMY CODE *****************************************
-        int current_lane = 1;
         int prev_path_size = prev_path_xs.size(); //sim tells you this TODO: THIS RETURNS ONLY POINTS NOT TRAVELLED TO IN LATER SIMULATION ITERATION
 
         // create list of sparce x,y wpts, evenly spaced at 30m
