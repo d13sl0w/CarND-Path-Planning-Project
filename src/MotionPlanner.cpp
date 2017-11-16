@@ -192,7 +192,6 @@ public:
 
     void state_update() {
         if (CAR_IN_ZONE) {
-            target_speed = leading_car.speed - 0.2;
 //            DESIRE_TURN = false;
             if (abs(leading_car.speed - target_speed) >= 5) {
                 check_lanes_available();
@@ -205,6 +204,8 @@ public:
                         current_lane = static_cast<LANE>((int) current_lane + 1);
                     }
                 }
+            } else {
+                target_speed = leading_car.speed - 0.2;
             }
         } else {
             target_speed = speed_limit;
