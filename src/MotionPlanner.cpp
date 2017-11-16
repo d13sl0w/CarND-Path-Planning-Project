@@ -104,6 +104,7 @@ private:
     double target_speed = 20;
     bool LEFT_LANE_CLEAR {false}, RIGHT_LANE_CLEAR {false}, LEFT_LANE_ADVANTAGE {false}, RIGHT_LANE_ADVANTAGE {false};
     bool TOO_SLOW {false}, CAR_IN_ZONE {false}, ACCIDENT_INCIPIENT {false}, LEADING_CAR {false}, DESIRE_TURN {false};
+    bool RIGHT_LEAD_CAR {false}, LEFT_LEAD_CAR {false};
 
 
 
@@ -159,6 +160,7 @@ public:
     // TODO: WHY ISN'T CAR OBEYING LEAD CAR IN RIGHT LANE
     double find_nearest_car_speed(LANE lane) { //TODO: has issue if there is none in front
         OtherCar nearest_in_lane;
+        bool CAR_EXISTS {false};
         double lane_change_front_buffer = 25;
         auto min_car_dist = std::numeric_limits<double>::max();
         for (const OtherCar& other: other_cars) {
@@ -166,14 +168,19 @@ public:
                     other.distance_from_ego_s < min_car_dist && other.distance_from_ego_s < lane_change_front_buffer) {
                 nearest_in_lane = other; //copy or what?
                 min_car_dist = other.distance_from_ego_s;
+                CAR_EXISTS = true;
             }
         }
-        return nearest_in_lane.speed;
+        std::cout << "NIL uid: " << nearest_in_lane.uid << "NIL lane: " << nearest_in_lane.current_lane << "NIL d: " << nearest_in_lane.d <<
+                  "NIL s: " << nearest_in_lane.s << "NIL distance from s: " << nearest_in_lane.distance_from_ego_s << "NIL speed: " << nearest_in_lane.speed << std::endl;
+        double result = std::numeric_limits<double>::max();
+        if (CAR_EXISTS) { result = nearest_in_lane.speed;}
+        return result;
     }
 
     void check_lanes_available() {
-        double turn_front_buffer = 20;
-        double turn_rear_buffer = 25;
+        double turn_front_buffer = 10;
+        double turn_rear_buffer = 15;
 
         LEFT_LANE_CLEAR = true;
         if (static_cast<int>(current_lane) - 1 < 0) {
@@ -190,7 +197,7 @@ public:
         if (LEFT_LANE_CLEAR) {
             LEFT_LANE_ADVANTAGE = false;
             double left_lead_speed = find_nearest_car_speed(static_cast<LANE>(current_lane - 1));
-            if (left_lead_speed >= leading_car.speed + 3) {
+            if (left_lead_speed >= leading_car.speed + 0.3) {
                 LEFT_LANE_ADVANTAGE = true;
             };
         }
@@ -210,7 +217,7 @@ public:
         if (RIGHT_LANE_CLEAR) {
             RIGHT_LANE_ADVANTAGE = false;
             double right_lead_speed = find_nearest_car_speed(static_cast<LANE>(current_lane + 1));
-            if (right_lead_speed >= leading_car.speed + 3) {
+            if (right_lead_speed >= leading_car.speed + 0.3) {
                 RIGHT_LANE_ADVANTAGE = true;
             };
         }
@@ -219,6 +226,12 @@ public:
 // TODO: I THINK OTHER CARS SPEED IS OFF!!!!
 // TODO: THIS REALLY REALLY NEEDS TO BE MADE INTO A TRUE FSM
     void state_update() {
+        find_leading_car();
+        if (LEADING_CAR) {
+            CAR_IN_ZONE = false;
+            is_leading_car_in_zone();
+        };
+
         if (CAR_IN_ZONE) {
             if (abs(leading_car.speed - target_speed) >= 3) {
                 check_lanes_available();
@@ -264,11 +277,7 @@ public:
         sensor_fusion = telemetry_packet["sensor_fusion"].get<std::vector<std::vector<double>>>();
 
         build_car_list(sensor_fusion);
-        find_leading_car();
-        if (LEADING_CAR) {
-            CAR_IN_ZONE = false;
-            is_leading_car_in_zone();
-        };
+
         state_update();
 
         std::cout << "target speed: " << target_speed << std::endl;
