@@ -36,7 +36,7 @@ string hasData(string s) {
 
 int main() {
     // **************************** BEGIN DOUG CODE ***************************************
-    double set_speed_limit {50};
+    double set_speed_limit {22};
     double set_max_accel {10};
     double set_max_jerk {50};
     double set_lane_width {4};

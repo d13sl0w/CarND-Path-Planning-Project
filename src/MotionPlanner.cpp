@@ -46,15 +46,18 @@ struct Waypoint {
 //  descendant and ControlledCar as the full on one... but of course data is given differently
 
 
+// This should probably be an inheritance isssue, ProtoCar with OtherCar as a simple
+//  descendant and ControlledCar as the full on one... but of course data is given differently
 class OtherCar {
 public:
-    int uid;
+    double uid;
     double x, y; // in map coordinates for all
     double vx, vy; // in meters per second, of course OTHER CARS CAN EXCEED SPEED LIMIT BY 10MPH, WILL ALSO LIKE STAY ABOVE 50-10MPH
     double s, d;
     double speed, yaw; // relative to ego yaw?
     LANE current_lane;
 //         STATE state;
+    double distance_from_ego_s = std::numeric_limits<double>::max();
 
     OtherCar(int _uid, double _x, double _y, double _vx, double _vy, double _s, double _d) {
         uid = _uid;
@@ -68,8 +71,10 @@ public:
         speed = sqrt(vx*vx + vy*vy); // both from_above_vxvy
         yaw   = atan2(vy, vx); // presumeably radians and map coordinates
 
-        current_lane = static_cast<LANE>((int)round(d / 2.)); // hacky, I know
+        current_lane = static_cast<LANE>((int)round(((d - 2.) / 4.) + 1 )); // hacky, I know
     }
+
+    OtherCar() = default;
 };
 
 
@@ -85,15 +90,22 @@ private:
     double ego_x, ego_y, ego_yaw, ego_s, ego_d, ego_speed, prev_final_s, prev_final_d;
     std::vector<double> prev_path_xs, prev_path_ys; // TODO: THIS RETURNS ONLY POINTS NOT TRAVELLED TO IN LATER SIMULATION ITERATION
     std::vector<std::vector<double>> sensor_fusion;
-//    double front_buffer_tolerance, passing_buffer_tolerance;
-//    double target_median, target_speed;
     vector<double> map_waypoints_x, map_waypoints_y, map_waypoints_dx, map_waypoints_s, map_waypoints_dy;
     double speed_limit, max_accel, max_jerk, lane_width; //width of lanes, in this case 4 meters each (6 lanes)
 //    double time_step_between_pts, max_sep_for_pts; // 0.02 seconds
 //    int latency_in_steps, steps_over_which_to_define_jerk; //1 to 3 expected; 5 is suggested
-    LANE current_lane, target_lane;
-//    bool currently_obstructed, left_lane_free, right_lane_free, imminent_collision {false};
+    LANE current_lane = CENTER_LANE; //, target_lane;
     double MPH_2_METPERSEC_FACTOR{0.44704}; //const? but breaks constructor????
+
+    std::vector<OtherCar> other_cars;
+    OtherCar leading_car;
+
+    double front_buffer_distance = 50; //meters
+    double target_speed = 20;
+    bool LEFT_LANE_CLEAR {false}, RIGHT_LANE_CLEAR {false}, LEFT_LANE_ADVANTAGE {false}, RIGHT_LANE_ADVANTAGE {false};
+    bool TOO_SLOW {false}, CAR_IN_ZONE {false}, ACCIDENT_INCIPIENT {false}, LEADING_CAR {false};
+
+
 
 //    void check_front_buffer() {}
 //    void check_change_lanes_buffer() {}
@@ -107,10 +119,10 @@ public:
             lane_width(set_lane_width), map_waypoints_x(map_waypoints_x), map_waypoints_y(map_waypoints_y),
             map_waypoints_s(map_waypoints_s), map_waypoints_dx(map_waypoints_dx),
             map_waypoints_dy(map_waypoints_dy) {} //TODO: make this one data structure
-
-    void set_speed_limit(const double set_speed_mph) {
-        ego_speed = set_speed_mph * MPH_2_METPERSEC_FACTOR;
-    }
+//
+//    void set_speed_limit(const double set_speed_mph) {
+//        ego_speed = set_speed_mph * MPH_2_METPERSEC_FACTOR;
+//    }
 
     PathPair generate_new_path() {
         // TODO: This is obviously in a state of disrepair, but it's following the shitty xy coordinates
@@ -129,6 +141,53 @@ public:
             new_path.y_vals.push_back(next_xy[1]);
         }
         return new_path; //  possibly melding with returned old ones
+    }
+
+
+    void build_car_list(std::vector<std::vector<double>> sensor_fusion_data) {
+        other_cars.clear();
+        for (const std::vector<double>& other_car : sensor_fusion_data) {
+            OtherCar new_car = OtherCar(other_car[0], other_car[1], other_car[2], other_car[3],
+                                        other_car[4], other_car[5], other_car[6]);
+            new_car.distance_from_ego_s = new_car.s - ego_s; // frenet/modulo issues
+            other_cars.push_back(new_car);
+        }
+        std::cout << (int)other_cars.size();
+    }
+
+    void find_nearest_car() { //TODO: has issue if there is none in front
+        LEADING_CAR = false;
+        auto min_car_dist = std::numeric_limits<double>::max();
+        for (const OtherCar& other: other_cars) {
+
+            if (other.current_lane == current_lane && 0 < other.distance_from_ego_s  && other.distance_from_ego_s < min_car_dist) {
+                leading_car = other; //copy or what?
+                min_car_dist = other.distance_from_ego_s;
+                LEADING_CAR = true;
+                std:cout << "my lane: " << current_lane << ", my s: " << ego_s << ", my d: " << ego_d << std::endl;
+                std::cout << "other car: " << leading_car.uid << " , d: " << leading_car.d << ", s: " << leading_car.s <<  ", lane: " << leading_car.current_lane << std::endl;
+            }
+        }
+        if (LEADING_CAR) {
+            std::cout << "leading car: " << leading_car.uid << std::endl;
+        } else {
+            std::cout << "no leading car" <<  std::endl;
+        }
+    }
+
+    void is_leading_car_in_zone() {
+        if (0 < leading_car.distance_from_ego_s && leading_car.distance_from_ego_s< front_buffer_distance) {
+            CAR_IN_ZONE = true;
+        }
+    }
+
+    void state_update() {
+        if (CAR_IN_ZONE) {
+            std::cout << "CAR IN ZONE!!!" << endl;
+            target_speed = leading_car.speed - 0.2;
+        } else {
+            target_speed = speed_limit;
+        }
     }
 
     void telemetry_update(json telemetry_packet) {
@@ -150,12 +209,18 @@ public:
 
         // Sensor Fusion Data, a list of all other cars on the same side of the road.
         sensor_fusion = telemetry_packet["sensor_fusion"].get<std::vector<std::vector<double>>>();
-//        sensor_fusion = std::copy(telemetry_packet["sensor_fusion"].begin(), telemetry_packet["sensor_fusion"].end());
 //        cout << "SENSOR****" << sensor_fusion[0] << endl;
+
+        build_car_list(sensor_fusion);
+        find_nearest_car();
+        if (LEADING_CAR) {
+            CAR_IN_ZONE = false;
+            is_leading_car_in_zone();
+        };
+        state_update();
+        std::cout << "target speed: " << target_speed << std::endl;
     }
-//    const OtherCar& current_lane_car;
-//    OtherCar& find_leading_car() {return &OtherCar;};
-//    bool determine_if_obstructed() {return true;}
+
 
 
 
@@ -172,8 +237,8 @@ public:
         //  or at the previous path's end point
         double ref_x = ego_x;
         double ref_y = ego_y;
-        cout << "ref x: " << ref_x << ", ref y: " << ego_y << endl;
-        double ref_vel = 50;
+//        cout << "ref x: " << ref_x << ", ref y: " << ego_y << endl;
+        double ref_vel = target_speed;
         double ref_yaw = planUtils.deg2rad(ego_yaw);
 
         // find angle car was heading via tangency of points, push two points to ptss
@@ -181,7 +246,7 @@ public:
         // if previous size is almost empty use the car as starting reference???: does sim return full path or no
         if (prev_path_size < 2) {
             // use two points that make the path tangent to the car
-            cout << "option 1" << endl;
+//            cout << "option 1" << endl;
             double prev_car_x = ego_x - cos(ego_yaw);
             double prev_car_y = ego_y - sin(ego_yaw);
 
@@ -192,7 +257,7 @@ public:
             ptsy.push_back(ego_y);
 
         } else { // use the prev path's end point as the starting reference
-            cout << "option 2" << endl;
+//            cout << "option 2" << endl;
             ref_x = prev_path_xs[prev_path_size - 1];
             ref_y = prev_path_ys[prev_path_size - 1];
 
@@ -227,12 +292,12 @@ public:
 
         tk::spline spline;
         // set x,y pts to spline
-        cout << ptsx.size() << "," << ptsy.size() << endl;
-        cout << "ptsx: ";
-        for (int i = 0; i < ptsx.size(); i++) {
-            cout << ptsx[i] << ", ";
-        }
-        cout << endl;
+//        cout << ptsx.size() << "," << ptsy.size() << endl;
+//        cout << "ptsx: ";
+//        for (int i = 0; i < ptsx.size(); i++) {
+//            cout << ptsx[i] << ", ";
+//        }
+//        cout << endl;
         spline.set_points(ptsx, ptsy);
 
         // define actual x,y pts we will use for this planner
@@ -254,7 +319,7 @@ public:
         //  output 50 pts
         double x_add_on = 0;
         for (int i = 1; i <= (50 - prev_path_xs.size()); i++) {
-            double N = (target_dist / (0.02 * ref_vel / 2.24));
+            double N = (target_dist / (0.02 * ref_vel));
             double x_point = x_add_on + (target_x) / N;
             double y_point = spline(x_point);
 
@@ -275,11 +340,8 @@ public:
         }
         PathPair results = {next_x_vals, next_y_vals};
         return results;
-//*************** END TO-DO/MY CODE!!!!!**************************************
     }
 };
-//
-//
 
 
 
