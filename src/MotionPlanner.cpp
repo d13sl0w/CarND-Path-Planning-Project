@@ -133,7 +133,10 @@ public:
     void find_leading_car() { //TODO: has issue if there is none in front
         auto min_car_dist = std::numeric_limits<double>::max();
         for (const OtherCar& other: other_cars) {
-            if (other.current_lane == current_lane && 0 < other.distance_from_ego_s  && other.distance_from_ego_s < min_car_dist) {
+            if (other.current_lane == current_lane &&
+                    0 < other.distance_from_ego_s  &&
+                    other.distance_from_ego_s < min_car_dist  &&
+                    other.distance_from_ego_s < 50) {
                 leading_car = other; //copy or what?
                 min_car_dist = other.distance_from_ego_s;
                 LEADING_CAR = true;
