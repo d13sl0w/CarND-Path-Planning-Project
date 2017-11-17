@@ -100,7 +100,7 @@ private:
     std::vector<OtherCar> other_cars;
     OtherCar leading_car;
 
-    double front_buffer_distance = 25; //meters
+    double front_buffer_distance = 35; //meters
     double target_speed {20}, ctrl_speed {0};
     bool LEFT_LANE_CLEAR {false}, RIGHT_LANE_CLEAR {false}, LEFT_LANE_ADVANTAGE {false}, RIGHT_LANE_ADVANTAGE {false};
     bool TOO_SLOW {false}, CAR_IN_ZONE {false}, ACCIDENT_INCIPIENT {false}, LEADING_CAR {false}, DESIRE_TURN {false};
@@ -153,12 +153,11 @@ public:
         }
     }
 
-    // TODO: WHY ISN'T CAR OBEYING LEAD CAR IN RIGHT LANE
     double find_nearest_car_speed(LANE lane) { //TODO: has issue if there is none in front
         std::cout << "I'M RUNNING AT ALL EVEEEEERRR!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
         OtherCar nearest_in_lane;
         bool CAR_EXISTS {false};
-        double lane_change_front_buffer = 35;
+        double lane_change_front_buffer = 40;
         auto min_car_dist = std::numeric_limits<double>::max();
         for (const OtherCar& other: other_cars) {
             if (other.current_lane == lane && 0 < other.distance_from_ego_s  &&
@@ -176,7 +175,7 @@ public:
         return result;
     }
 
-    void are_speed_limited() {
+    void are_speed_limited() { // Change here for weighting of slower vs lane change danger
         if ( speed_limit - leading_car.speed > 2.0) { SPEED_LIMITED = true; };
     }
 
@@ -213,7 +212,6 @@ public:
         if (right_lead_speed >= leading_car.speed + 1.0) { RIGHT_LANE_ADVANTAGE = true; }
     }
 
-// TODO: I THINK OTHER CARS SPEED IS OFF!!!!
 // TODO: THIS REALLY REALLY NEEDS TO BE MADE INTO A TRUE FSM
     void state_update() {
         // TODO: prevent switches till completion probs if {IS_CHANGING_LANES}
@@ -291,27 +289,23 @@ public:
 
 
 
-    PathPair spline_next() { //splines guaranteed through points, typically made of piece wise from polynomials
-        // ***************** TEST/MY DUMMY CODE *****************************************
+    PathPair spline_next() {
+        // heavily borrowed from walkthrough code, somewhat modified
+
         int prev_path_size = prev_path_xs.size(); //sim tells you this TODO: THIS RETURNS ONLY POINTS NOT TRAVELLED TO IN LATER SIMULATION ITERATION
 
-        // create list of sparce x,y wpts, evenly spaced at 30m
-        //  will later interpolate with spline and fill
-        vector<double> ptsx, ptsy;
+        vector<double> spline_feed_x, spline_feed_y;
 
-        // reference x,y yaw states; will either reference the starting point as where the car is
-        //  or at the previous path's end point
+        // either reference the starting point as where the car is or at the previous path's end point
         double ref_x = ego_x;
         double ref_y = ego_y;
 //        cout << "ref x: " << ref_x << ", ref y: " << ego_y << endl;
         if (ctrl_speed > target_speed) { ctrl_speed -= 0.223 * target_speed / 15;}
         if (ctrl_speed < target_speed) { ctrl_speed += 0.223 * target_speed / 15;}
         double ref_vel = ctrl_speed;
-//        double ref_vel = target_speed;
         double ref_yaw = planUtils.deg2rad(ego_yaw);
 
         if (prev_path_size > 0) { ego_s = prev_final_s; }
-        // find angle car was heading via tangency of points, push two points to ptss
 
         // if previous size is almost empty use the car as starting reference???: does sim return full path or no
         if (prev_path_size < 2) {
@@ -320,11 +314,11 @@ public:
             double prev_car_x = ego_x - cos(ego_yaw);
             double prev_car_y = ego_y - sin(ego_yaw);
 
-            ptsx.push_back(prev_car_x);
-            ptsx.push_back(ego_x);
+            spline_feed_x.push_back(prev_car_x);
+            spline_feed_x.push_back(ego_x);
 
-            ptsy.push_back(prev_car_y);
-            ptsy.push_back(ego_y);
+            spline_feed_y.push_back(prev_car_y);
+            spline_feed_y.push_back(ego_y);
 
         } else { // use the prev path's end point as the starting reference
 //            cout << "option 2" << endl;
@@ -335,37 +329,34 @@ public:
             double ref_y_prev = prev_path_ys[prev_path_size - 2];
             ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
 
-            // use two pts that make the path tanget to the previous path's end point
-            ptsx.push_back(ref_x_prev);
-            ptsx.push_back(ref_x);
+            // use two pts that make the path tangent to the previous path's end point
+            spline_feed_x.push_back(ref_x_prev);
+            spline_feed_x.push_back(ref_x);
 
-            ptsy.push_back(ref_y_prev);
-            ptsy.push_back(ref_y);
+            spline_feed_y.push_back(ref_y_prev);
+            spline_feed_y.push_back(ref_y);
         }
 
         // in Frenet coords add i(here, 3) 30m spaced points ahead of starting reference
         for (int i = 1; i <= 2; i++) {
             vector<double> bkbone_waypts = planUtils.getXY(ego_s + (30 * i), (2 + 4 * current_lane), map_waypoints_s,
                                                            map_waypoints_x, map_waypoints_y);
-            ptsx.push_back(bkbone_waypts[0]);
-            ptsy.push_back(bkbone_waypts[1]);
+            spline_feed_x.push_back(bkbone_waypts[0]);
+            spline_feed_y.push_back(bkbone_waypts[1]);
         }
 
-        // shift car ref angle to 0 to make math easie
-        for (int i = 0; i < ptsx.size(); i++) {
-            double shift_x = ptsx[i] - ref_x;
-            double shift_y = ptsy[i] - ref_y;
+        // shift car ref angle to 0 to make math easier
+        for (int i = 0; i < spline_feed_x.size(); i++) {
+            double shift_x = spline_feed_x[i] - ref_x;
+            double shift_y = spline_feed_y[i] - ref_y;
 
-            ptsx[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
-            ptsy[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
+            spline_feed_x[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
+            spline_feed_y[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
         }
 
         tk::spline spline;
-        // set x,y pts to spline
+        spline.set_points(spline_feed_x, spline_feed_y);
 
-        spline.set_points(ptsx, ptsy);
-
-        // define actual x,y pts we will use for this planner
         vector<double> next_x_vals, next_y_vals;
 
         // start with all previous points from last time
@@ -393,7 +384,7 @@ public:
             double x_ref = x_point;
             double y_ref = y_point;
 
-            // rotate back to normal after rotating it earlier
+            // rotate back to normal 
             x_point = (x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw));
             y_point = (x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw));
 
