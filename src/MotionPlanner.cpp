@@ -230,7 +230,7 @@ public:
                 target_speed = leading_car.speed - 1.0;
                 are_speed_limited();
             }
-            else { target_speed = speed_limit; }
+            else { target_speed = (speed_limit + leading_car.speed) / 2; }
         }
         else { target_speed = speed_limit; }
         if (SPEED_LIMITED) { check_lanes_available(); }
